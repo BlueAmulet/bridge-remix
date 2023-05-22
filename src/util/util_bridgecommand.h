@@ -32,6 +32,8 @@
 
 #include "../tracy/tracy.hpp"
 
+#include <mutex>
+
 extern bool gbBridgeRunning;
 
 #define WAIT_FOR_SERVER_RESPONSE(func, value) \
@@ -76,6 +78,7 @@ public:
     // can be alive at a time to ensure data integrity on the command and data buffers. To resolve
     // this issue I recommend enclosing the BridgeCommand object in its own scope block, and make
     // sure there is no command nesting happening either.
+    s_progressMutex.lock();
     assert(!s_inProgress);
     if (s_inProgress) {
       Logger::err("Multiple active BridgeCommand instances detected!");
@@ -125,6 +128,7 @@ public:
     }
 
     s_inProgress = false;
+    s_progressMutex.unlock();
   }
 
   inline void syncDataQueue(size_t expectedMemUsage, bool posResetOnLastIndex = false) const {
@@ -486,6 +490,7 @@ private:
   const uint32_t m_handle;
   int32_t m_batchStartPos;
   inline static bool s_inProgress = false;
+  inline static std::mutex s_progressMutex;
 
   inline static size_t s_counter = 0;
 
